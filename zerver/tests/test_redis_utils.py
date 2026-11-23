@@ -1,5 +1,6 @@
 from unittest import mock
 
+from django.test import override_settings
 from redis import StrictRedis
 from typing_extensions import override
 
@@ -24,6 +25,32 @@ class RedisUtilsTest(ZulipTestCase):
     def setUpClass(cls) -> None:
         cls.redis_client = get_redis_client()
         return super().setUpClass()
+
+    @override_settings(REDIS_DB=0)
+    @mock.patch("zerver.lib.redis_utils.redis.StrictRedis")
+    def test_get_redis_client_uses_default_database(self, mock_strict_redis: mock.Mock) -> None:
+        get_redis_client()
+
+        mock_strict_redis.assert_called_once_with(
+            host="127.0.0.1",
+            port=6379,
+            password=mock.ANY,
+            db=0,
+            decode_responses=False,
+        )
+
+    @override_settings(REDIS_DB=3)
+    @mock.patch("zerver.lib.redis_utils.redis.StrictRedis")
+    def test_get_redis_client_uses_configured_database(self, mock_strict_redis: mock.Mock) -> None:
+        get_redis_client()
+
+        mock_strict_redis.assert_called_once_with(
+            host="127.0.0.1",
+            port=6379,
+            password=mock.ANY,
+            db=3,
+            decode_responses=False,
+        )
 
     def test_put_and_get_data(self) -> None:
         data = {
